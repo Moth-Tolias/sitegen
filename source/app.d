@@ -1,7 +1,6 @@
 ///
-import std.stdio;
-import std.file;
-import std.path;
+
+import std.datetime: DateTime;
 
 void main(string[] args) //@safe
 {
@@ -11,16 +10,40 @@ void main(string[] args) //@safe
 
 void compileSite(in string path) //@safe
 {
+	import std.file: dirEntries, SpanMode;
 	foreach(entry; dirEntries(path, "*.html", SpanMode.breadth))
 	{
 		compilePage(entry, path);
 	}
 }
 
+DateTime getCurrentTime() @safe
+{
+	import std.datetime: Clock;
+	return cast(DateTime) Clock.currTime();
+}
+
+string timeToString(in DateTime dateTime) pure @safe
+{
+	import std.string;
+	immutable raw =	dateTime.toISOExtString();
+	immutable formatted = raw.replace("T", " ");
+	return "<time datetime=\"" ~ raw ~ "\">" ~ formatted ~ "</time>";
+}
+
 void compilePage(in string path, string inputPath)
-in(path.exists && !(path.isDir))
+in
+{
+	import std.file: exists, isDir;
+	assert(path.exists && !(path.isDir));
+}
+do
 {
 	immutable outputPath = getOutputPath(path);
+
+	import std.file: mkdirRecurse;
+	import std.path: dirName;
+	import std.stdio: File;
 	mkdirRecurse(dirName(outputPath));
 	auto compiledPage = File(outputPath, "w");
 
@@ -66,12 +89,15 @@ string parseIncludeDirective(in string line, in string inputPath) pure @safe
 {
 	import std.array: split;
 	auto s = split(line);
+
+	import std.path: buildNormalizedPath;
 	return buildNormalizedPath(inputPath, s[2]);
 }
 
 string include(string path, int indentation)
 {
 	string result;
+	import std.stdio: File;
 	auto f = File(path, "r");
 	foreach(line; f.byLine)
 	{
@@ -102,6 +128,8 @@ bool isIncludeDirective(in string line)
 Options handleOptions(in string[] args) @safe
 {
 	Options result;
+	import std.path: buildNormalizedPath;
+	import std.file: getcwd;
 	result.inputPath = buildNormalizedPath(getcwd(), "site");
 	return result;
 }
