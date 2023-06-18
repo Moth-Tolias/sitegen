@@ -71,6 +71,32 @@ int getIndentationLevel(in string line) pure @safe
 	return cast(int)lastIndexOf(line, "\t") + 1;
 }
 
+enum Directive
+{
+	None, //normal text
+	Include,
+	BuiltIn,
+	Function
+}
+
+Directive LineToDirective(in string line)
+{
+	if(line.isIncludeDirective)
+	{
+		return Directive.Include;
+	}
+	else if(line.isBuiltInDirective)
+	{
+		return Directive.BuiltIn;
+	}
+	else if(line.isBuiltInDirective)
+	{
+		return Directive.Function;
+	}
+
+	return Directive.None;
+}
+
 string getOutputPath(in string inputPath) @safe
 out(r)
 {
