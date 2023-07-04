@@ -6,21 +6,23 @@ import std.path;
 void main(string[] args) //@safe
 {
 	immutable options = handleOptions(args);
-	compileSite(options.inputPath);
+	compileSite(options);
 }
 
-void compileSite(in string path) //@safe
+void compileSite(in Options options) //@safe
 {
+	immutable path = options.inputPath;
 	foreach(entry; dirEntries(path, "*.html", SpanMode.breadth))
 	{
-		compilePage(entry, path);
+		compilePage(entry, options);
 	}
 }
 
-void compilePage(in string path, string inputPath)
+void compilePage(in string path, in Options options)
 in(path.exists && !(path.isDir))
 {
-	immutable outputPath = getOutputPath(path);
+	immutable inputPath = options.inputPath;
+	immutable outputPath = getOutputPath(path, options.outputPath);
 	mkdirRecurse(dirName(outputPath));
 	auto compiledPage = File(outputPath, "w");
 
@@ -48,7 +50,7 @@ int getIndentationLevel(in string line) pure @safe
 	return cast(int)lastIndexOf(line, "\t") + 1;
 }
 
-string getOutputPath(in string inputPath) @safe
+string getOutputPath(in string inputPath, in string outputPath) @safe
 out(r)
 {
 	import std.path: isValidPath;
@@ -59,7 +61,7 @@ do
 	import std.file: getcwd;
 	import std.path: relativePath, buildNormalizedPath;
 	auto filename = relativePath(inputPath, getcwd());
-	return buildNormalizedPath(getcwd(), "out", filename);
+	return buildNormalizedPath(getcwd(), outputPath, filename);
 }
 
 string parseIncludeDirective(in string line, in string inputPath) pure @safe
@@ -103,6 +105,7 @@ Options handleOptions(in string[] args) @safe
 {
 	Options result;
 	result.inputPath = buildNormalizedPath(getcwd(), "site");
+	result.inputPath = buildNormalizedPath(getcwd(), "out");
 	return result;
 }
 

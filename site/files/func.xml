@@ -1,4 +1,2 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<snusk>
-	oh my god a $1! we should $2 it
-</snusk>
+<!-- sitegen echo $1 --> [called from: <!-- sitegen echo $0 -->]
+	<!-- sitegen echo $2 --> + <!-- sitegen echo $3 --> = <!-- sitegen echo $2 + $3 -->
