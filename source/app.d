@@ -1,7 +1,6 @@
 ///
-import std.stdio;
-import std.file;
-import std.path;
+
+import std.datetime: DateTime;
 
 void main(string[] args) //@safe
 {
@@ -12,17 +11,46 @@ void main(string[] args) //@safe
 void compileSite(in Options options) //@safe
 {
 	immutable path = options.inputPath;
+	import std.file: dirEntries, SpanMode;
 	foreach(entry; dirEntries(path, "*.html", SpanMode.breadth))
 	{
 		compilePage(entry, options);
 	}
 }
 
-void compilePage(in string path, in Options options)
-in(path.exists && !(path.isDir))
+DateTime getCurrentTime() @safe
 {
+	import std.datetime: Clock;
+	return cast(DateTime) Clock.currTime();
+}
+
+string timeToString(in DateTime dateTime) pure @safe
+{
+	import std.string;
+	immutable raw =	dateTime.toISOExtString();
+	immutable formatted = raw.replace("T", " ");
+	return "<time datetime=\"" ~ raw ~ "\">" ~ formatted ~ "</time>";
+}
+
+void compilePage(in string path, in Options options)
+in
+{
+	import std.file: exists, isDir;
+	assert(path.exists && !(path.isDir));
+}
+do
+{
+	debug
+	{
+		import std.stdio: writeln;
+		writeln(path);
+	}
 	immutable inputPath = options.inputPath;
 	immutable outputPath = getOutputPath(path, options.outputPath);
+
+	import std.file: mkdirRecurse;
+	import std.path: dirName;
+	import std.stdio: File;
 	mkdirRecurse(dirName(outputPath));
 	auto compiledPage = File(outputPath, "w");
 
@@ -50,6 +78,32 @@ int getIndentationLevel(in string line) pure @safe
 	return cast(int)lastIndexOf(line, "\t") + 1;
 }
 
+enum Directive
+{
+	None, //normal text
+	Include,
+	BuiltIn,
+	Function
+}
+
+Directive LineToDirective(in string line)
+{
+	if(line.isIncludeDirective)
+	{
+		return Directive.Include;
+	}
+	//else if(line.isBuiltInDirective)
+	//{
+	//	return Directive.BuiltIn;
+	//}
+	//else if(line.isBuiltInDirective)
+	//{
+	//	return Directive.Function;
+	//}
+
+	return Directive.None;
+}
+
 string getOutputPath(in string inputPath, in string outputPath) @safe
 out(r)
 {
@@ -68,12 +122,15 @@ string parseIncludeDirective(in string line, in string inputPath) pure @safe
 {
 	import std.array: split;
 	auto s = split(line);
+
+	import std.path: buildNormalizedPath;
 	return buildNormalizedPath(inputPath, s[2]);
 }
 
 string include(string path, int indentation)
 {
 	string result;
+	import std.stdio: File;
 	auto f = File(path, "r");
 	foreach(line; f.byLine)
 	{
@@ -104,8 +161,10 @@ bool isIncludeDirective(in string line)
 Options handleOptions(in string[] args) @safe
 {
 	Options result;
+	import std.path: buildNormalizedPath;
+	import std.file: getcwd;
 	result.inputPath = buildNormalizedPath(getcwd(), "site");
-	result.inputPath = buildNormalizedPath(getcwd(), "out");
+	result.outputPath = buildNormalizedPath(getcwd(), "out");
 	return result;
 }
 
