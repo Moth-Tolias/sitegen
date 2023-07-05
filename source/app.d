@@ -1,5 +1,5 @@
 ///
-
+import sitegen.directives;
 import std.datetime: DateTime;
 
 void main(string[] args) //@safe
@@ -18,20 +18,6 @@ void compileSite(in Options options) //@safe
 	}
 }
 
-DateTime getCurrentTime() @safe
-{
-	import std.datetime: Clock;
-	return cast(DateTime) Clock.currTime();
-}
-
-string timeToString(in DateTime dateTime) pure @safe
-{
-	import std.string;
-	immutable raw =	dateTime.toISOExtString();
-	immutable formatted = raw.replace("T", " ");
-	return "<time datetime=\"" ~ raw ~ "\">" ~ formatted ~ "</time>";
-}
-
 void compilePage(in string path, in Options options)
 in
 {
@@ -40,11 +26,6 @@ in
 }
 do
 {
-	debug
-	{
-		import std.stdio: writeln;
-		writeln(path);
-	}
 	immutable inputPath = options.inputPath;
 	immutable outputPath = getOutputPath(path, options.outputPath);
 
@@ -57,51 +38,79 @@ do
 	auto source = File(path, "r");
 	foreach(line; source.byLineCopy)
 	{
-		if(line.isIncludeDirective)
+		if(line.isDirective)
 		{
-			immutable indentation = getIndentationLevel(line);
-			immutable fname = parseIncludeDirective(line, inputPath);
-			compiledPage.writeln(include(fname, indentation));
+			compiledPage.writeln(parseAndExecute(line, inputPath, getIndentationLevel(line)));
+			continue;
 		}
-		else
+
+		string toParse;
+		bool checking;
+
+		foreach(c; line)
 		{
-			compiledPage.writeln(line);
+			if(c == '<')
+			{
+				debug
+				{
+					import std.stdio: writeln;
+					writeln("opening");
+				}
+				checking = true;
+			}
+
+			if(checking)
+			{
+				toParse ~= c;
+
+				if(c == '>')
+				{
+					debug
+					{
+						import std.stdio: writeln;
+						writeln("closing");
+					}
+					import std.string: startsWith, endsWith;
+					if(toParse.isDirective)
+					{
+						compiledPage.write(parseAndExecute(toParse, inputPath));
+					}
+					else
+					{
+						compiledPage.write(toParse);
+					}
+
+					checking = false;
+					toParse = "";
+				}
+			}
+			else
+			{
+				compiledPage.write(c);
+			}
 		}
+
+		compiledPage.write('\n');
 	}
 
 	compiledPage.close;
+}
+
+string parseAndExecute(in string s, in string inputPath, in int indentation = 0)
+{
+	immutable parsed = parse(s);
+	if(parsed.d == Directive.Include)
+	{
+		return executeIncludeDirective(parsed.s, inputPath, indentation);
+	}
+
+	return s;
 }
 
 int getIndentationLevel(in string line) pure @safe
 {
 	import std.string: lastIndexOf;
 	return cast(int)lastIndexOf(line, "\t") + 1;
-}
-
-enum Directive
-{
-	None, //normal text
-	Include,
-	BuiltIn,
-	Function
-}
-
-Directive LineToDirective(in string line)
-{
-	if(line.isIncludeDirective)
-	{
-		return Directive.Include;
-	}
-	//else if(line.isBuiltInDirective)
-	//{
-	//	return Directive.BuiltIn;
-	//}
-	//else if(line.isBuiltInDirective)
-	//{
-	//	return Directive.Function;
-	//}
-
-	return Directive.None;
 }
 
 string getOutputPath(in string inputPath, in string outputPath) @safe
@@ -118,13 +127,16 @@ do
 	return buildNormalizedPath(getcwd(), outputPath, filename);
 }
 
-string parseIncludeDirective(in string line, in string inputPath) pure @safe
+string executeIncludeDirective(in string includes, in string inputPath, in int indentation)
 {
-	import std.array: split;
-	auto s = split(line);
-
+	string result;
 	import std.path: buildNormalizedPath;
-	return buildNormalizedPath(inputPath, s[2]);
+	import std.string: split;
+	foreach(s; includes.split)
+	{
+		result ~= include(buildNormalizedPath(inputPath, s), indentation);
+	}
+	return result;
 }
 
 string include(string path, int indentation)
@@ -151,13 +163,6 @@ string include(string path, int indentation)
 	return result[0 .. $-1];
 }
 
-bool isIncludeDirective(in string line)
-{
-	import std.string;
-	immutable stripped = line.strip;
-	return stripped.startsWith("<!-- include ") && stripped.endsWith(" -->");
-}
-
 Options handleOptions(in string[] args) @safe
 {
 	Options result;
@@ -172,4 +177,18 @@ struct Options
 {
 	string inputPath;
 	string outputPath;
+}
+
+DateTime getCurrentTime() @safe
+{
+	import std.datetime: Clock;
+	return cast(DateTime) Clock.currTime();
+}
+
+string timeToString(in DateTime dateTime) pure @safe
+{
+	import std.string;
+	immutable raw =	dateTime.toISOExtString();
+	immutable formatted = raw.replace("T", " ");
+	return "<time datetime=\"" ~ raw ~ "\">" ~ formatted ~ "</time>";
 }
