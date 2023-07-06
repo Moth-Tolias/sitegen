@@ -103,6 +103,9 @@ string executeCallDirective(in string args, in string inputPath, in int indentat
 		{
 			if(c == '<')
 			{
+				result ~= toParse;
+				toParse = "";
+
 				checking = true;
 			}
 
