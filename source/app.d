@@ -31,68 +31,11 @@ do
 
 	import std.file: mkdirRecurse;
 	import std.path: dirName;
-	import std.stdio: File;
 	mkdirRecurse(dirName(outputPath));
+
+	import std.stdio: File;
 	auto compiledPage = File(outputPath, "w");
-
-	auto source = File(path, "r");
-	foreach(line; source.byLineCopy)
-	{
-		if(line.isDirective)
-		{
-			compiledPage.writeln(parseAndExecute(line, inputPath, getIndentationLevel(line)));
-			continue;
-		}
-
-		string toParse;
-		bool checking;
-
-		foreach(c; line)
-		{
-			if(c == '<')
-			{
-				debug
-				{
-					import std.stdio: writeln;
-					writeln("opening");
-				}
-				checking = true;
-			}
-
-			if(checking)
-			{
-				toParse ~= c;
-
-				if(c == '>')
-				{
-					debug
-					{
-						import std.stdio: writeln;
-						writeln("closing");
-					}
-					import std.string: startsWith, endsWith;
-					if(toParse.isDirective)
-					{
-						compiledPage.write(parseAndExecute(toParse, inputPath));
-					}
-					else
-					{
-						compiledPage.write(toParse);
-					}
-
-					checking = false;
-					toParse = "";
-				}
-			}
-			else
-			{
-				compiledPage.write(c);
-			}
-		}
-
-		compiledPage.write('\n');
-	}
-
+	compiledPage.writeln(executeCallDirective(path, inputPath, 0));
 	compiledPage.close;
 }
 
@@ -102,8 +45,9 @@ string parseAndExecute(in string s, in string inputPath, in int indentation = 0)
 	final switch(parsed.d) with (Directive)
 	{
 		case Include: return executeIncludeDirective(parsed.s, inputPath, indentation);
-		case Call: return executeCallDirective(parsed.s);
+		case Call: return executeCallDirective(parsed.s, inputPath, indentation);
 		case Echo: return "echo:" ~ parsed.s;
+		case Time: return getCurrentTime.toISOExtString();
 		case None: return s;
 	}
 }
@@ -140,9 +84,64 @@ string executeIncludeDirective(in string includes, in string inputPath, in int i
 	return result;
 }
 
-string executeCallDirective(in string args)
+string executeCallDirective(in string args, in string inputPath, in int indentation)
 {
-	return args;
+	import std.path: buildNormalizedPath;
+	import std.string: split;
+	immutable path = buildNormalizedPath(inputPath, args.split[0]);
+
+	string result;
+
+	import std.stdio: File;
+	auto source = File(path, "r");
+	foreach(line; source.byLineCopy)
+	{
+		if(line.isDirective) //todo: does this really need to be special cased?
+		{
+			result ~= parseAndExecute(line, inputPath, getIndentationLevel(line));
+			result ~= '\n';
+			continue;
+		}
+
+		string toParse;
+		bool checking;
+
+		foreach(c; line)
+		{
+			if(c == '<')
+			{
+				checking = true;
+			}
+
+			if(checking)
+			{
+				toParse ~= c;
+
+				if(c == '>')
+				{
+					if(toParse.isDirective)
+					{
+						result ~= parseAndExecute(toParse, inputPath);
+					}
+					else
+					{
+						result ~= toParse;
+					}
+
+					checking = false;
+					toParse = "";
+				}
+			}
+			else
+			{
+				result ~= c;
+			}
+		}
+
+		result ~= '\n';
+	}
+
+	return result;
 }
 
 string include(string path, int indentation)

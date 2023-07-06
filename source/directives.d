@@ -5,7 +5,8 @@ enum Directive
 	None, //normal text
 	Include,
 	Call,
-	Echo
+	Echo,
+	Time
 }
 
 struct StringAndDirective
@@ -16,11 +17,17 @@ struct StringAndDirective
 
 Directive stringToDirective(in string s) pure @safe
 {
+
 	if(s.isDirective)
 	{
 		import std.string: strip, split;
 		immutable stripped = s.strip;
 		immutable keyword = stripped.split[2];
+		debug
+		{
+			import std.stdio: writeln;
+			writeln(keyword);
+		}
 
 		if (keyword == "include")
 		{
@@ -35,6 +42,11 @@ Directive stringToDirective(in string s) pure @safe
 		if (keyword == "echo")
 		{
 			return Directive.Echo;
+		}
+
+		if (keyword == "time")
+		{
+			return Directive.Time;
 		}
 
 		assert(false);
@@ -53,6 +65,7 @@ StringAndDirective parse(in string s) pure @safe
 		case Include: result.s = parseIncludeDirective(s); break;
 		case Call: result.s = parseCallDirective(s); break;
 		case Echo: result.s = parseEchoDirective(s); break;
+		case Time: break;
 		case None: break;
 	}
 
@@ -63,17 +76,18 @@ string parseIncludeDirective(in string s) pure @safe
 {
 	string result;
 	import std.array: split;
-	foreach(include; split(s)[3 .. $-1])
-	{
-		result ~= include;
-	}
-	return result;
+	return split(s)[3];
 }
 
 string parseCallDirective(in string s) pure @safe
 {
+	string result;
 	import std.array: split;
-	return split(s)[3];
+	foreach(arg; split(s)[3 .. $-1])
+	{
+		result ~= arg ~ " ";
+	}
+	return result;
 }
 
 string parseEchoDirective(in string s) pure @safe
