@@ -48,11 +48,41 @@ StringAndDirective parse(in string s) pure @safe
 	StringAndDirective result;
 
 	result.d = stringToDirective(s);
-	if(result.d == Directive.Include)
+	final switch (result.d) with (Directive)
 	{
-		import std.array: split;
-		foreach(include; split(s)[3 .. $-1])
-		result.s ~= include;
+		case Include: result.s = parseIncludeDirective(s); break;
+		case Call: result.s = parseCallDirective(s); break;
+		case Echo: result.s = parseEchoDirective(s); break;
+		case None: break;
+	}
+
+	return result;
+}
+
+string parseIncludeDirective(in string s) pure @safe
+{
+	string result;
+	import std.array: split;
+	foreach(include; split(s)[3 .. $-1])
+	{
+		result ~= include;
+	}
+	return result;
+}
+
+string parseCallDirective(in string s) pure @safe
+{
+	import std.array: split;
+	return split(s)[3];
+}
+
+string parseEchoDirective(in string s) pure @safe
+{
+	string result;
+	import std.array: split;
+	foreach(echo; split(s)[3 .. $-1])
+	{
+		result ~= echo ~ " ";
 	}
 	return result;
 }

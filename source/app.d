@@ -99,12 +99,13 @@ do
 string parseAndExecute(in string s, in string inputPath, in int indentation = 0)
 {
 	immutable parsed = parse(s);
-	if(parsed.d == Directive.Include)
+	final switch(parsed.d) with (Directive)
 	{
-		return executeIncludeDirective(parsed.s, inputPath, indentation);
+		case Include: return executeIncludeDirective(parsed.s, inputPath, indentation);
+		case Call: return executeCallDirective(parsed.s);
+		case Echo: return "echo:" ~ parsed.s;
+		case None: return s;
 	}
-
-	return s;
 }
 
 int getIndentationLevel(in string line) pure @safe
@@ -137,6 +138,11 @@ string executeIncludeDirective(in string includes, in string inputPath, in int i
 		result ~= include(buildNormalizedPath(inputPath, s), indentation);
 	}
 	return result;
+}
+
+string executeCallDirective(in string args)
+{
+	return args;
 }
 
 string include(string path, int indentation)
