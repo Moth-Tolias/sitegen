@@ -96,13 +96,6 @@ string executeCallDirective(in string args, in string inputPath, in int indentat
 	auto source = File(path, "r");
 	foreach(line; source.byLineCopy)
 	{
-		if(line.isDirective) //todo: does this really need to be special cased?
-		{
-			result ~= parseAndExecute(line, inputPath, getIndentationLevel(line));
-			result ~= '\n';
-			continue;
-		}
-
 		string toParse;
 		bool checking;
 

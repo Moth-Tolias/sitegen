@@ -23,11 +23,6 @@ Directive stringToDirective(in string s) pure @safe
 		import std.string: strip, split;
 		immutable stripped = s.strip;
 		immutable keyword = stripped.split[2];
-		debug
-		{
-			import std.stdio: writeln;
-			writeln(keyword);
-		}
 
 		if (keyword == "include")
 		{
