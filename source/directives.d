@@ -16,18 +16,29 @@ struct StringAndDirective
 
 Directive stringToDirective(in string s) pure @safe
 {
-	if(s.isIncludeDirective)
+	if(s.isDirective)
 	{
-		return Directive.Include;
+		import std.string: strip, split;
+		immutable stripped = s.strip;
+		immutable keyword = stripped.split[2];
+
+		if (keyword == "include")
+		{
+			return Directive.Include;
+		}
+
+		if (keyword == "call")
+		{
+			return Directive.Call;
+		}
+
+		if (keyword == "echo")
+		{
+			return Directive.Echo;
+		}
+
+		assert(false);
 	}
-	//else if(s.isBuiltInDirective)
-	//{
-	//	return Directive.BuiltIn;
-	//}
-	//else if(s.isBuiltInDirective)
-	//{
-	//	return Directive.Function;
-	//}
 
 	return Directive.None;
 }
@@ -51,11 +62,4 @@ bool isDirective(in string s) pure @safe
 	import std.string: strip, startsWith, endsWith;
 	immutable stripped = s.strip;
 	return stripped.startsWith("<!-- sitegen ") && stripped.endsWith(" -->");
-}
-
-bool isIncludeDirective(in string s) pure @safe
-{
-	import std.string: strip, startsWith, endsWith;
-	immutable stripped = s.strip;
-	return stripped.startsWith("<!-- sitegen include ") && stripped.endsWith(" -->");
 }
