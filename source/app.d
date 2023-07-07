@@ -99,6 +99,22 @@ string executeCallDirective(in string args, in string inputPath, in int indentat
 		string toParse;
 		bool checking;
 
+		if (line != "")
+		{
+			foreach(_; 0 .. indentation)
+			{
+				result ~= "\t";
+			}
+		}
+
+		if(line.isDirective)
+		{
+			import std.algorithm: count;
+			result ~= parseAndExecute(line, inputPath, cast(int)line.count('\t'));
+			result ~= '\n';
+			continue;
+		}
+
 		foreach(c; line)
 		{
 			if(c == '<')
@@ -117,7 +133,7 @@ string executeCallDirective(in string args, in string inputPath, in int indentat
 				{
 					if(toParse.isDirective)
 					{
-						result ~= parseAndExecute(toParse, inputPath);
+						result ~= parseAndExecute(toParse, inputPath, 0);
 					}
 					else
 					{
@@ -140,7 +156,7 @@ string executeCallDirective(in string args, in string inputPath, in int indentat
 	return result;
 }
 
-string include(string path, int indentation)
+string include(in string path, in int indentation)
 {
 	string result;
 	import std.stdio: File;

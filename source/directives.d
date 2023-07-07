@@ -98,7 +98,11 @@ string parseEchoDirective(in string s) pure @safe
 
 bool isDirective(in string s) pure @safe
 {
+	bool result = true;
 	import std.string: strip, startsWith, endsWith;
+	import std.algorithm: count;
 	immutable stripped = s.strip;
-	return stripped.startsWith("<!-- sitegen ") && stripped.endsWith(" -->");
+	result &= stripped.count('<') == 1;
+	result &= stripped.startsWith("<!-- sitegen ") && stripped.endsWith(" -->");
+	return result;
 }
